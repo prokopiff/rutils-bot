@@ -74,9 +74,12 @@ def get_email_from_repo(user_name, repo_name) -> str:
   logger.debug('Got %d commits', len(commits))
   msg = 'No commits found'
   for commit in commits:
-    if commit['author']['login'] == user_name:
-      msg = commit['commit']['author']['email']
-      break
+    try:
+      if commit['author']['login'].lower() == user_name.lower():
+        msg = commit['commit']['author']['email']
+        break
+    except TypeError:
+      pass
   return msg
 
 

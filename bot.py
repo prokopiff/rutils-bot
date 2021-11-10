@@ -45,21 +45,18 @@ def extract_username(url: str) -> str:
 
 def extract_email(user_name: str) -> str:
   repos = get_repos(user_name)
-  repo_name = ''
   for repo in repos:
     if not repo['fork']:
       repo_name = repo['name']
-      break
-
-  if not repo_name:
-    return 'No repositories found'
-  else:
-    return get_email_from_repo(user_name, repo_name)
+      msg = get_email_from_repo(user_name, repo_name)
+      if msg:
+        return msg
+  return 'No commits found'
 
 
 def get_repos(username: str):
   logger.debug('Getting repos for %s', username)
-  resp = requests.get('https://api.github.com/users/{}/repos'.format(username),
+  resp = requests.get('https://api.github.com/users/{}/repos?per_page=100'.format(username),
                       headers=default_headers)
 
   json = sorted(resp.json(), key=lambda repo: repo['updated_at'], reverse=True)
@@ -69,10 +66,13 @@ def get_repos(username: str):
 
 def get_email_from_repo(user_name, repo_name) -> str:
   logger.debug('Getting commits for %s/%s', user_name, repo_name)
-  commits = requests.get('https://api.github.com/repos/{}/{}/commits'.format(user_name, repo_name)).json()
+  commits = requests.get('https://api.github.com/repos/{}/{}/commits?per_page=100'.format(user_name, repo_name)).json()
   commits = sorted(commits, key=lambda c: c['commit']['author']['date'], reverse=True)
   logger.debug('Got %d commits', len(commits))
-  msg = 'No commits found'
+  msg = ''
+  if not isinstance(commits, list):
+    return msg
+
   for commit in commits:
     try:
       if commit['author']['login'].lower() == user_name.lower():
